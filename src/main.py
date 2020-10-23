@@ -4,9 +4,12 @@ from src.problems import Problems
 population_size = 15
 problem_size = 30
 
-nsga = NondominatedSortingGeneticAlgorithm(population_size, Problems(problem_size, 'zdt1'))
+nsga = NondominatedSortingGeneticAlgorithm(population_size, Problems(problem_size, 'zdt1'), 1)
 nsga.run()
+print('\n')
 
 for i in range(len(nsga.population)):
-    print(nsga.population[i].id, nsga.population[i].fitness, nsga.population[i].front,
-          nsga.population[i].domination_count, nsga.population[i].dominated_individuals)
+    print(nsga.population[i], nsga.population[i].fitness, nsga.population[i].front,
+          nsga.population[i].domination_count, nsga.population[i].dominated_individuals,
+          nsga.population[i].phenotypic_distance, nsga.population[i].adjusted_dummy)
+
