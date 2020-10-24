@@ -1,5 +1,6 @@
 import random
 from math import pow, sqrt
+from collections import Counter
 
 class Individual:
     """Each individual represents a solution to the problem"""
@@ -14,8 +15,12 @@ class Individual:
         self.domination_count = 0
         self.dominated_individuals = []
         self.front = 0
-
         self.id = idx
+        self.born = 0
+        self.death = 0
+        self.parents = []
+        self.children = []
+        self.mask = []
 
     def reset_front(self):
         self.front = 0
@@ -29,6 +34,15 @@ class Individual:
         second_check = self.fitness[0] < other_individual.fitness[0] or self.fitness[1] < other_individual.fitness[1]
         return first_check and second_check
 
+    def mutate(self, mutation_prob):
+        while True:
+            chance = random.uniform(0,1)
+            if chance <= mutation_prob:
+                gene = random.randint(0, len(self.genes) - 1)
+                self.genes[gene] = random.uniform(0, 1)
+            else:
+                break
+
     def __str__(self):
         return 'Individual ' + str(self.id)
 
@@ -38,14 +52,19 @@ class Individual:
 
 class NondominatedSortingGeneticAlgorithm:
     """Class to represent the metaheuristic"""
-    def __init__(self, population_size, problem, sharing_distance):
+    def __init__(self, population_size, problem, max_generations, sharing_distance, mutation_prob):
         self.population_size = population_size
         self.population = []
         self.problem = problem
         self.sharing_distance = sharing_distance
         self.max_solution = []
         self.min_solution = []
-        self.idx = 0
+        self.idx = 1
+        self.selected_individuals = []
+        self.children = []
+        self.mutation_prob = mutation_prob
+        self.max_generations = max_generations
+        self.backup_population = []
 
     def create_initial_population(self):
         for _ in range(self.population_size):
@@ -57,6 +76,8 @@ class NondominatedSortingGeneticAlgorithm:
             individual.fitness = self.problem.calculate_fitness(individual)
 
             self.population.append(individual)
+
+        self.backup_population += self.population
 
         for i in range(len(individual.fitness)):
             self.max_solution.append(float('-Inf'))
@@ -133,24 +154,106 @@ class NondominatedSortingGeneticAlgorithm:
 
                 i.adjusted_dummy = i.dummy_fitness / i.niche_count
 
-            initial_fitness = min(front_individuals, key=lambda i: i.adjusted_dummy).adjusted_dummy*0.9
+            initial_fitness = min(front_individuals, key=lambda i: i.adjusted_dummy).adjusted_dummy*0.85
 
             front += 1
 
     def selection(self):
-        pass
+        self.selected_individuals = []
+        for i in self.population:
+            self.selected_individuals += [i for _ in range(round(i.adjusted_dummy))]
+            unit = random.uniform(0, 1)
+            if unit < i.adjusted_dummy % 1:
+                self.selected_individuals += [i]
 
     def crossover(self):
-        pass
+        self.children = []
+        while len(self.children) < round(len(self.population)):
+            i = random.randint(0, len(self.selected_individuals) - 1)
+            first_parent = self.selected_individuals[i]
+            second_parent = first_parent
+            while first_parent.genes == second_parent.genes:
+                j = random.randint(0, len(self.selected_individuals) - 1)
+                second_parent = self.selected_individuals[j]
+
+            first_child = Individual([], [], self.idx)
+            self.idx += 1
+            second_child = Individual([], [], self.idx)
+            self.idx += 1
+
+            mask = [random.randint(0,1) for _ in first_parent.genes]
+
+            for m in range(len(mask)):
+                value = mask[m]
+                if value == 0:
+                    first_child.genes.append(first_parent.genes[m])
+                    second_child.genes.append(second_parent.genes[m])
+                elif value == 1:
+                    first_child.genes.append(second_parent.genes[m])
+                    second_child.genes.append(first_parent.genes[m])
+
+            first_child.parents = [first_parent, second_parent]
+            first_child.mask = mask
+            second_child.parents = [first_parent, second_parent]
+            second_child.mask = mask
+
+            first_child.mutate(self.mutation_prob)
+            second_child.mutate(self.mutation_prob)
+
+            first_child.fitness = self.problem.calculate_fitness(first_child)
+            second_child.fitness = self.problem.calculate_fitness(second_child)
+
+            self.children.append(first_child)
+            self.children.append(second_child)
+
+        self.population += self.children
+        self.backup_population += self.children
 
     def substitution(self):
-        pass
+        new_population = []
+        old_population = [i for i in self.population]
 
-    def mutate(self):
-        pass
+        while len(new_population) < self.population_size:
+            selected = max(old_population, key=lambda i: i.adjusted_dummy)
+            old_population.remove(selected)
+            new_population.append(selected)
+
+        self.population = new_population
+
+    def evaluate(self):
+        fitness = [i.adjusted_dummy for i in self.population]
+        count = Counter(fitness)
+        for i in count:
+            count[i] = count[i] / len(fitness)
+            if count[i] > 0.99:
+                print(count)
+                print('BREAKS')
+                return True
+        return False
 
     def run(self):
+        generation = 1
+
         self.create_initial_population()
         self.check_fitness()
         self.dominated_sort()
         self.calculate_fitness_and_niche()
+
+        while generation <= self.max_generations:
+            print(generation)
+            self.selection()
+            self.crossover()
+            self.check_fitness()
+            self.dominated_sort()
+            self.calculate_fitness_and_niche()
+            # for i in self.population:
+            #     print(i, i.fitness, i.front, i.dummy_fitness, i.adjusted_dummy)
+            self.substitution()
+            # for i in self.population:
+            #     print(i, i.fitness, i.front, i.dummy_fitness, i.adjusted_dummy)
+            if self.evaluate():
+                break
+            generation += 1
+
+
+
