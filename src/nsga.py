@@ -21,6 +21,7 @@ class Individual:
         self.parents = []
         self.children = []
         self.mask = []
+        self.mutations = []
 
     def reset_front(self):
         self.front = 0
@@ -39,7 +40,9 @@ class Individual:
             chance = random.uniform(0,1)
             if chance <= mutation_prob:
                 gene = random.randint(0, len(self.genes) - 1)
-                self.genes[gene] = random.uniform(0, 1)
+                new_value = random.uniform(0, 1)
+                self.genes[gene] = new_value
+                self.mutations.append((gene, new_value))
             else:
                 break
 
@@ -52,7 +55,7 @@ class Individual:
 
 class NondominatedSortingGeneticAlgorithm:
     """Class to represent the metaheuristic"""
-    def __init__(self, population_size, problem, max_generations, sharing_distance, mutation_prob):
+    def __init__(self, population_size, problem, sharing_distance, crossover_prob, mutation_prob):
         self.population_size = population_size
         self.population = []
         self.problem = problem
@@ -62,9 +65,11 @@ class NondominatedSortingGeneticAlgorithm:
         self.idx = 1
         self.selected_individuals = []
         self.children = []
+        self.crossover_prob = crossover_prob
         self.mutation_prob = mutation_prob
-        self.max_generations = max_generations
+        self.max_generations = 1
         self.backup_population = []
+        self.generation = 1
 
     def create_initial_population(self):
         for _ in range(self.population_size):
@@ -181,16 +186,36 @@ class NondominatedSortingGeneticAlgorithm:
             second_child = Individual([], [], self.idx)
             self.idx += 1
 
-            mask = [random.randint(0,1) for _ in first_parent.genes]
+            mask = []
 
-            for m in range(len(mask)):
-                value = mask[m]
-                if value == 0:
-                    first_child.genes.append(first_parent.genes[m])
-                    second_child.genes.append(second_parent.genes[m])
-                elif value == 1:
-                    first_child.genes.append(second_parent.genes[m])
-                    second_child.genes.append(first_parent.genes[m])
+            for i in range(len(first_parent.genes)):
+                interval = abs((first_parent.genes[i] - second_parent.genes[i]))
+                if first_parent.genes[i] >= second_parent.genes[i]:
+                    min_value = second_parent.genes[i] - self.crossover_prob * interval
+                    max_value = first_parent.genes[i] + self.crossover_prob * interval
+                else:
+                    min_value = first_parent.genes[i] - self.crossover_prob * interval
+                    max_value = second_parent.genes[i] + self.crossover_prob * interval
+
+                if min_value < 0:
+                    min_value = 0
+                if max_value > 1:
+                    max_value = 1
+
+                mask.append((min_value, max_value))
+                first_child.genes.append(random.uniform(min_value, max_value))
+                second_child.genes.append(random.uniform(min_value, max_value))
+
+            #
+            #
+            # for m in range(len(mask)):
+            #     value = mask[m]
+            #     if value == 0:
+            #         first_child.genes.append(first_parent.genes[m])
+            #         second_child.genes.append(second_parent.genes[m])
+            #     elif value == 1:
+            #         first_child.genes.append(second_parent.genes[m])
+            #         second_child.genes.append(first_parent.genes[m])
 
             first_child.parents = [first_parent, second_parent]
             first_child.mask = mask
@@ -231,16 +256,16 @@ class NondominatedSortingGeneticAlgorithm:
                 return True
         return False
 
-    def run(self):
-        generation = 1
+    def run(self, generations):
+        self.max_generations += generations
+        if self.generation == 1:
+            self.create_initial_population()
+            self.check_fitness()
+            self.dominated_sort()
+            self.calculate_fitness_and_niche()
 
-        self.create_initial_population()
-        self.check_fitness()
-        self.dominated_sort()
-        self.calculate_fitness_and_niche()
-
-        while generation <= self.max_generations:
-            print(generation)
+        while self.generation <= self.max_generations:
+            print(self.generation)
             self.selection()
             self.crossover()
             self.check_fitness()
@@ -253,7 +278,16 @@ class NondominatedSortingGeneticAlgorithm:
             #     print(i, i.fitness, i.front, i.dummy_fitness, i.adjusted_dummy)
             if self.evaluate():
                 break
-            generation += 1
+            self.generation += 1
+
+    def next_gen(self):
+        self.selection()
+        self.crossover()
+        self.check_fitness()
+        self.dominated_sort()
+        self.calculate_fitness_and_niche()
+        self.substitution()
+        self.generation += 1
 
 
 
