@@ -2,8 +2,10 @@ import random
 from math import pow, sqrt
 from collections import Counter
 
+
 class Individual:
     """Each individual represents a solution to the problem"""
+
     def __init__(self, genes, fitness, idx):
         self.genes = genes
         self.fitness = fitness
@@ -31,13 +33,19 @@ class Individual:
         self.phenotypic_distance = []
 
     def dominates(self, other_individual):
-        first_check = self.fitness[0] <= other_individual.fitness[0] and self.fitness[1] <= other_individual.fitness[1]
-        second_check = self.fitness[0] < other_individual.fitness[0] or self.fitness[1] < other_individual.fitness[1]
+        first_check = (
+            self.fitness[0] <= other_individual.fitness[0]
+            and self.fitness[1] <= other_individual.fitness[1]
+        )
+        second_check = (
+            self.fitness[0] < other_individual.fitness[0]
+            or self.fitness[1] < other_individual.fitness[1]
+        )
         return first_check and second_check
 
     def mutate(self, mutation_prob):
         while True:
-            chance = random.uniform(0,1)
+            chance = random.uniform(0, 1)
             if chance <= mutation_prob:
                 gene = random.randint(0, len(self.genes) - 1)
                 new_value = random.uniform(0, 1)
@@ -47,15 +55,18 @@ class Individual:
                 break
 
     def __str__(self):
-        return 'Individual ' + str(self.id)
+        return "Individual " + str(self.id)
 
     def __repr__(self):
-        return 'Individual ' + str(self.id)
+        return "Individual " + str(self.id)
 
 
 class NondominatedSortingGeneticAlgorithm:
     """Class to represent the metaheuristic"""
-    def __init__(self, population_size, problem, sharing_distance, crossover_prob, mutation_prob):
+
+    def __init__(
+        self, population_size, problem, sharing_distance, crossover_prob, mutation_prob
+    ):
         self.population_size = population_size
         self.population = []
         self.problem = problem
@@ -85,8 +96,8 @@ class NondominatedSortingGeneticAlgorithm:
         self.backup_population += self.population
 
         for i in range(len(individual.fitness)):
-            self.max_solution.append(float('-Inf'))
-            self.min_solution.append(float('Inf'))
+            self.max_solution.append(float("-Inf"))
+            self.min_solution.append(float("Inf"))
 
     def check_fitness(self):
 
@@ -144,7 +155,9 @@ class NondominatedSortingGeneticAlgorithm:
                         continue
 
                     aux = []
-                    for num1, num2, num3, num4 in zip(i.fitness, j.fitness, self.max_solution, self.min_solution):
+                    for num1, num2, num3, num4 in zip(
+                        i.fitness, j.fitness, self.max_solution, self.min_solution
+                    ):
                         aux.append(pow((num1 - num2) / (num3 - num4), 2))
 
                     if sqrt(sum(aux)) < self.sharing_distance:
@@ -153,13 +166,21 @@ class NondominatedSortingGeneticAlgorithm:
                         distance = self.sharing_distance
                     i.phenotypic_distance.append(distance)
 
-                i.niche_count = sum([1 - distance / self.sharing_distance for distance in i.phenotypic_distance])
+                i.niche_count = sum(
+                    [
+                        1 - distance / self.sharing_distance
+                        for distance in i.phenotypic_distance
+                    ]
+                )
                 if i.niche_count < 1:
                     i.niche_count = 1
 
                 i.adjusted_dummy = i.dummy_fitness / i.niche_count
 
-            initial_fitness = min(front_individuals, key=lambda i: i.adjusted_dummy).adjusted_dummy*0.85
+            initial_fitness = (
+                min(front_individuals, key=lambda i: i.adjusted_dummy).adjusted_dummy
+                * 0.85
+            )
 
             front += 1
 
@@ -252,7 +273,7 @@ class NondominatedSortingGeneticAlgorithm:
             count[i] = count[i] / len(fitness)
             if count[i] > 0.99:
                 print(count)
-                print('BREAKS')
+                print("BREAKS")
                 return True
         return False
 
@@ -288,6 +309,3 @@ class NondominatedSortingGeneticAlgorithm:
         self.calculate_fitness_and_niche()
         self.substitution()
         self.generation += 1
-
-
-

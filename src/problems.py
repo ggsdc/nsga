@@ -54,7 +54,7 @@ class ZDT4:
     def f2(self, individual):
         sigma = sum([pow(x, 2) - 10 * cos(4 * pi * x) for x in individual.genes[1:]])
         g = 1 + 10 * (self.size - 1) + sigma
-        h = 1- sqrt(self.f1(individual) / g)
+        h = 1 - sqrt(self.f1(individual) / g)
         return g * h
 
 
@@ -63,7 +63,9 @@ class ZDT6:
         self.size = size
 
     def f1(self, individual):
-        return 1 - exp(-4 * individual.genes[0]) * pow(sin(6 * pi * individual.genes[0]), 6)
+        return 1 - exp(-4 * individual.genes[0]) * pow(
+            sin(6 * pi * individual.genes[0]), 6
+        )
 
     def f2(self, individual):
         sigma = sum(individual.genes[1:])
@@ -71,18 +73,18 @@ class ZDT6:
         h = 1 - pow((self.f1(individual) / g), 2)
         return g * h
 
-class Problems:
 
+class Problems:
     def __init__(self, function):
-        if function == 'zdt1':
+        if function == "zdt1":
             self.function = ZDT1(30)
-        elif function == 'zdt2':
+        elif function == "zdt2":
             self.function = ZDT2(30)
-        elif function == 'zdt3':
+        elif function == "zdt3":
             self.function = ZDT3(30)
-        elif function == 'zdt4':
+        elif function == "zdt4":
             self.function = ZDT4(10)
-        elif function == 'zdt6':
+        elif function == "zdt6":
             self.function = ZDT6(10)
         self.size = self.function.size
 
